@@ -67,17 +67,22 @@ class WriteEXAFSPaths(FiretaskBase):
 
 
 @explicit_serialize
-class WriteXanesIOSetFromPrev(FiretaskBase):
-    required_params = ["prev_calc_dir", "absorbing_atom", "structure", "feff_input_set"]
+class WriteXASIOSetFromPrev(FiretaskBase):
+    required_params = ["prev_calc_dir", "absorbing_atom", "structure", "xas_type"]
     optional_params = ["radius", "other_params"]
 
     def run_task(self, fw_spec):
         prev_calc_dir = os.path.abspath(self["prev_calc_dir"])
         d = Tags.from_file(os.path.join(prev_calc_dir, "feff.inp"))
         d["CONTROL"] = ["0 0 0 0 1 1"]
-        if "ELNES" in d:
-            d["XANES"] = d["ELNES"]["ENERGY"]
-        d["_del"] = ["LDOS", "ELNES"]
+        tags_to_delete = ["LDOS"]
+        xas_type = self["xas_type"]
+        for x in ["ELNES", "EXELFS", "XANES", "EXAFS"]:
+            if x in d:
+                d[xas_type] = d[x]["ENERGY"] if "ENERGY" in d[x] else d[x]
+                tags_to_delete.append(x)
+                break
+        d["_del"] = tags_to_delete
         other_params = self.get("other_params", {})
         user_tag_settings = other_params.get("user_tag_settings", {})
         user_tag_settings.update(d)

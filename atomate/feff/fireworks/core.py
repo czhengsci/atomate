@@ -11,7 +11,7 @@ from fireworks import Firework
 
 from atomate.common.firetasks.glue_tasks import PassCalcLocs
 from atomate.feff.firetasks.glue_tasks import CopyFeffOutputs
-from atomate.feff.firetasks.write_inputs import WriteFeffFromIOSet, WriteEXAFSPaths, get_feff_input_set_obj, WriteXanesIOSetFromPrev
+from atomate.feff.firetasks.write_inputs import WriteFeffFromIOSet, WriteEXAFSPaths, get_feff_input_set_obj, WriteXASIOSetFromPrev
 from atomate.feff.firetasks.run_calc import RunFeffDirect
 from atomate.feff.firetasks.parse_outputs import SpectrumToDbTask, AddPathsToFilepadTask
 
@@ -53,10 +53,9 @@ class XASFW(Firework):
 
         if parents and from_prev_calc:
             t.append(CopyFeffOutputs(calc_loc=True))
-            t.append(WriteXanesIOSetFromPrev(prev_calc_dir=".", absorbing_atom=absorbing_atom,
-                                             structure=structure, radius=radius,
-                                             feff_input_set="XANES",
-                                             other_params=override_default_feff_params))
+            t.append(WriteXASIOSetFromPrev(prev_calc_dir=".", absorbing_atom=absorbing_atom,
+                                           structure=structure, radius=radius,
+                                           xas_type="XANES", other_params=override_default_feff_params))
         else:
             t.append(WriteFeffFromIOSet(absorbing_atom=absorbing_atom, structure=structure,
                                         radius=radius, feff_input_set=feff_input_set))
