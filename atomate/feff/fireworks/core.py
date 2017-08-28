@@ -11,7 +11,7 @@ from fireworks import Firework
 
 from atomate.common.firetasks.glue_tasks import PassCalcLocs
 from atomate.feff.firetasks.glue_tasks import CopyFeffOutputs
-from atomate.feff.firetasks.write_inputs import WriteFeffFromIOSet, WriteEXAFSPaths, get_feff_input_set_obj
+from atomate.feff.firetasks.write_inputs import WriteFeffFromIOSet, WriteEXAFSPaths, get_feff_input_set_obj, WriteXanesIOSetFromPrev
 from atomate.feff.firetasks.run_calc import RunFeffDirect
 from atomate.feff.firetasks.parse_outputs import SpectrumToDbTask, AddPathsToFilepadTask
 
@@ -22,7 +22,7 @@ __email__ = 'kmathew@lbl.gov'
 class XASFW(Firework):
     def __init__(self, absorbing_atom, structure, feff_input_set="XANES", edge="K", radius=10.0,
                  name="XAS spectroscopy", feff_cmd="feff", override_default_feff_params=None,
-                 db_file=None, parents=None, metadata=None, **kwargs):
+                 db_file=None, parents=None, metadata=None, from_prev_calc=False, **kwargs):
         """
         Write the input set for FEFF-XAS spectroscopy, run FEFF and insert the absorption
         coefficient to the database (or dump to a json file if db_file=None).
@@ -37,25 +37,39 @@ class XASFW(Firework):
             radius (float): cluster radius in angstroms
             name (str)
             feff_cmd (str): path to the feff binary
-            override_default_feff_params (dict): override feff tag settings.
+            override_default_feff_params (dict): other input set settings that need to overridden.
             db_file (str): path to the db file.
             parents (Firework): Parents of this particular Firework. FW or list of FWS.
             metadata (dict): meta data
+            from_prev_calc (bool): input set from the previous calculation(firework).
             **kwargs: Other kwargs that are passed to Firework.__init__.
         """
         override_default_feff_params = override_default_feff_params or {}
-
         feff_input_set = get_feff_input_set_obj(feff_input_set, absorbing_atom, structure, edge=edge,
                                                 radius=radius, **override_default_feff_params)
         spectrum_type = feff_input_set.__class__.__name__[2:-3]
 
-        t = [WriteFeffFromIOSet(absorbing_atom=absorbing_atom, structure=structure, radius=radius,
-                                feff_input_set=feff_input_set),
-             RunFeffDirect(feff_cmd=feff_cmd),
-             PassCalcLocs(name=name),
-             SpectrumToDbTask(absorbing_atom=absorbing_atom, structure=structure,
-                              db_file=db_file, spectrum_type=spectrum_type, edge=edge,
-                              output_file="xmu.dat", metadata=metadata)]
+        t = []
+
+        if parents and from_prev_calc:
+            t.append(CopyFeffOutputs(calc_loc=True))
+            t.append(WriteXanesIOSetFromPrev(prev_calc_dir=".", absorbing_atom=absorbing_atom,
+                                             structure=structure, radius=radius,
+                                             feff_input_set="XANES",
+                                             other_params=override_default_feff_params))
+        else:
+            t.append(WriteFeffFromIOSet(absorbing_atom=absorbing_atom, structure=structure,
+                                        radius=radius, feff_input_set=feff_input_set))
+
+        t.extend(
+            [
+                RunFeffDirect(feff_cmd=feff_cmd),
+
+                PassCalcLocs(name=name),
+
+                SpectrumToDbTask(absorbing_atom=absorbing_atom, structure=structure, db_file=db_file,
+                                 spectrum_type=spectrum_type, edge=edge, output_file="xmu.dat",
+                                 metadata=metadata)])
 
         super(XASFW, self).__init__(t, parents=parents, name="{}-{}".
                                     format(structure.composition.reduced_formula, name), **kwargs)

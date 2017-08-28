@@ -2,13 +2,14 @@
 
 from __future__ import division, print_function, unicode_literals, absolute_import
 
-from six import string_types
-
 """
 This module defines tasks for writing FEFF input sets.
 """
 
-from pymatgen.io.feff.inputs import Paths
+import os
+from six import string_types
+
+from pymatgen.io.feff.inputs import Paths, Tags
 
 from fireworks import FiretaskBase, explicit_serialize
 
@@ -63,6 +64,28 @@ class WriteEXAFSPaths(FiretaskBase):
         atoms = self['feff_input_set'].atoms
         paths = Paths(atoms, self["paths"], degeneracies=self.get("degeneracies", []))
         paths.write_file()
+
+
+@explicit_serialize
+class WriteXanesIOSetFromPrev(FiretaskBase):
+    required_params = ["prev_calc_dir", "absorbing_atom", "structure", "feff_input_set"]
+    optional_params = ["radius", "other_params"]
+
+    def run_task(self, fw_spec):
+        prev_calc_dir = os.path.abspath(self["prev_calc_dir"])
+        d = Tags.from_file(os.path.join(prev_calc_dir, "feff.inp"))
+        d["CONTROL"] = ["0 0 0 0 1 1"]
+        if "ELNES" in d:
+            d["XANES"] = d["ELNES"]["ENERGY"]
+        d["_del"] = ["LDOS", "ELNES"]
+        other_params = self.get("other_params", {})
+        user_tag_settings = other_params.get("user_tag_settings", {})
+        user_tag_settings.update(d)
+        other_params["user_tag_settings"] = user_tag_settings
+        feff_input_set = get_feff_input_set_obj(self["feff_input_set"], self["absorbing_atom"],
+                                                self["structure"], self.get("radius", 10.0),
+                                                **other_params)
+        feff_input_set.write_input(".")
 
 
 def get_feff_input_set_obj(fis, *args, **kwargs):
