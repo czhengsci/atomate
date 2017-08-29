@@ -55,7 +55,8 @@ class XASFW(Firework):
             t.append(CopyFeffOutputs(calc_loc=True))
             t.append(WriteXASIOSetFromPrev(prev_calc_dir=".", absorbing_atom=absorbing_atom,
                                            structure=structure, radius=radius,
-                                           xas_type="XANES", other_params=override_default_feff_params))
+                                           xas_type="XANES",
+                                           other_params=override_default_feff_params))
         else:
             t.append(WriteFeffFromIOSet(absorbing_atom=absorbing_atom, structure=structure,
                                         radius=radius, feff_input_set=feff_input_set))

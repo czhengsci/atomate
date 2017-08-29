@@ -180,19 +180,20 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
         fw_metadata = dict(metadata) if metadata else {}
         fw_metadata["absorbing_atom_index"] = ab_idx
         fw_name = "{}-{}-{}".format(spectrum_type, edge, ab_idx)
-        fws.append(EELSFW(ab_idx, structure, feff_input_set=feff_input_set, edge=edge, radius=radius,
+        fw_eels = EELSFW(ab_idx, structure, feff_input_set=feff_input_set, edge=edge, radius=radius,
                           beam_energy=beam_energy, beam_direction=beam_direction,
                           collection_angle=collection_angle, convergence_angle=convergence_angle,
                           user_eels_settings=user_eels_settings, feff_cmd=feff_cmd, db_file=db_file,
                           metadata=fw_metadata, name=fw_name,
-                          override_default_feff_params=override_default_feff_params))
+                          override_default_feff_params=override_default_feff_params)
+        fws.append(fw_eels)
         if add_xas:
             fw_name = "{}-{}-{}".format(add_xas, edge, ab_idx)
             wfname = "{}:{}:{} edge".format(structure.composition.reduced_formula,
                                             "{}-{} spectroscopy".format(spectrum_type, add_xas), edge)
             fws.append(XASFW(ab_idx, structure, edge=edge, radius=radius, feff_input_set=add_xas,
                              feff_cmd=feff_cmd, db_file=db_file, metadata=fw_metadata, name=fw_name,
-                             from_prev_calc=True,
+                             from_prev_calc=True, parents=fw_eels,
                              override_default_feff_params=override_default_feff_params))
 
     wf_metadata = dict(metadata) if metadata else {}
