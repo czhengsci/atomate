@@ -159,7 +159,7 @@ class EXAFSPathsFW(Firework):
         feff_input_set = get_feff_input_set_obj(feff_input_set, absorbing_atom, structure, edge=edge,
                                                 radius=radius, **override_default_feff_params)
 
-        t = [CopyFeffOutputs(calc_loc=True),
+        t = [CopyFeffOutputs(calc_loc=True, exclude_files=["feff.inp", "xmu.dat"]),
              WriteFeffFromIOSet(absorbing_atom=absorbing_atom, structure=structure, radius=radius,
                                 feff_input_set=feff_input_set),
              WriteEXAFSPaths(feff_input_set=feff_input_set, paths=paths, degeneracies=degeneracies),

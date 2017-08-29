@@ -73,7 +73,7 @@ class WriteXASIOSetFromPrev(FiretaskBase):
 
     def run_task(self, fw_spec):
         prev_calc_dir = os.path.abspath(self["prev_calc_dir"])
-        d = Tags.from_file(os.path.join(prev_calc_dir, "feff.inp"))
+        d = dict(Tags.from_file(os.path.join(prev_calc_dir, "feff.inp")))
         d["CONTROL"] = ["0 0 0 0 1 1"]
         tags_to_delete = ["LDOS"]
         xas_type = self["xas_type"]
@@ -84,10 +84,10 @@ class WriteXASIOSetFromPrev(FiretaskBase):
                 break
         d["_del"] = tags_to_delete
         other_params = self.get("other_params", {})
-        user_tag_settings = other_params.get("user_tag_settings", {})
+        user_tag_settings = other_params.get("user_tag_settings", {}) or {}
         user_tag_settings.update(d)
         other_params["user_tag_settings"] = user_tag_settings
-        feff_input_set = get_feff_input_set_obj(self["feff_input_set"], self["absorbing_atom"],
+        feff_input_set = get_feff_input_set_obj(self["xas_type"], self["absorbing_atom"],
                                                 self["structure"], self.get("radius", 10.0),
                                                 **other_params)
         feff_input_set.write_input(".")
