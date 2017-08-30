@@ -111,5 +111,5 @@ class AddPathsToFilepadTask(FiretaskBase):
         labels = self.get("labels", None)
         for i, p in enumerate(paths):
             l = labels[i] if labels is not None else None
-            fpad.add_file(p, label=l, metadata=self.get("metadata", None),
+            fpad.add_file(p, l, metadata=self.get("metadata", None),
                           compress=self.get("compress", True))
