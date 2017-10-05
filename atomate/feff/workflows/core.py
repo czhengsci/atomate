@@ -179,6 +179,7 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
     for ab_idx in ab_atom_indices:
         fw_metadata = dict(metadata) if metadata else {}
         fw_metadata["absorbing_atom_index"] = ab_idx
+        fw_metadata["absorbing_atom_symbol"] = str(structure[ab_idx].species_string)
         fw_name = "{}-{}-{}".format(spectrum_type, edge, ab_idx)
         fw_eels = EELSFW(ab_idx, structure, feff_input_set=feff_input_set, edge=edge, radius=radius,
                           beam_energy=beam_energy, beam_direction=beam_direction,
