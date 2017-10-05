@@ -171,8 +171,8 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
 
     spectrum_type = get_feff_input_set_obj(feff_input_set, ab_atom_indices[0], structure).__class__.__name__[2:-3]
 
-    wfname = "{}:{}:{}:{} edge".format(structure.composition.reduced_formula,
-                                    "{} spectroscopy".format(spectrum_type), edge, absorbing_atom)
+    wfname = "{}:{}:{}:{} edge".format(structure.composition.reduced_formula, absorbing_atom,
+                                    "{} spectroscopy".format(spectrum_type), edge)
 
     # add firework for each absorbing atom site index
     fws = []
@@ -191,9 +191,8 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
         fws.append(fw_eels)
         if add_xas:
             fw_name = "{}-{}-{}-{}".format(add_xas, edge, ab_idx, ab_atom_symbol)
-            wfname = "{}:{}:{}:{} edge".format(structure.composition.reduced_formula,
-                                               "{}-{} spectroscopy".format(spectrum_type, add_xas),
-                                               edge, absorbing_atom)
+            wfname = "{}:{}:{}:{} edge".format(structure.composition.reduced_formula, absorbing_atom,
+                                               "{}-{} spectroscopy".format(spectrum_type, add_xas), edge)
             fws.append(XASFW(ab_idx, structure, edge=edge, radius=radius, feff_input_set=add_xas,
                              feff_cmd=feff_cmd, db_file=db_file, metadata=fw_metadata, name=fw_name,
                              from_prev_calc=True, parents=fw_eels,
