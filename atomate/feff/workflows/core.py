@@ -171,16 +171,17 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
 
     spectrum_type = get_feff_input_set_obj(feff_input_set, ab_atom_indices[0], structure).__class__.__name__[2:-3]
 
-    wfname = "{}:{}:{} edge".format(structure.composition.reduced_formula,
-                                    "{} spectroscopy".format(spectrum_type), edge)
+    wfname = "{}:{}:{}:{} edge".format(structure.composition.reduced_formula,
+                                    "{} spectroscopy".format(spectrum_type), edge, absorbing_atom)
 
     # add firework for each absorbing atom site index
     fws = []
     for ab_idx in ab_atom_indices:
         fw_metadata = dict(metadata) if metadata else {}
         fw_metadata["absorbing_atom_index"] = ab_idx
-        fw_metadata["absorbing_atom_symbol"] = str(structure[ab_idx].species_string)
-        fw_name = "{}-{}-{}".format(spectrum_type, edge, ab_idx)
+        ab_atom_symbol = str(structure[ab_idx].species_string)
+        fw_metadata["absorbing_atom_symbol"] = ab_atom_symbol
+        fw_name = "{}-{}-{}-{}".format(spectrum_type, edge, ab_idx, ab_atom_symbol)
         fw_eels = EELSFW(ab_idx, structure, feff_input_set=feff_input_set, edge=edge, radius=radius,
                           beam_energy=beam_energy, beam_direction=beam_direction,
                           collection_angle=collection_angle, convergence_angle=convergence_angle,
@@ -189,9 +190,10 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
                           override_default_feff_params=override_default_feff_params)
         fws.append(fw_eels)
         if add_xas:
-            fw_name = "{}-{}-{}".format(add_xas, edge, ab_idx)
-            wfname = "{}:{}:{} edge".format(structure.composition.reduced_formula,
-                                            "{}-{} spectroscopy".format(spectrum_type, add_xas), edge)
+            fw_name = "{}-{}-{}-{}".format(add_xas, edge, ab_idx, ab_atom_symbol)
+            wfname = "{}:{}:{}:{} edge".format(structure.composition.reduced_formula,
+                                               "{}-{} spectroscopy".format(spectrum_type, add_xas),
+                                               edge, absorbing_atom)
             fws.append(XASFW(ab_idx, structure, edge=edge, radius=radius, feff_input_set=add_xas,
                              feff_cmd=feff_cmd, db_file=db_file, metadata=fw_metadata, name=fw_name,
                              from_prev_calc=True, parents=fw_eels,
