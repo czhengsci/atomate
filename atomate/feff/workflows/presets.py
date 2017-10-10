@@ -51,6 +51,6 @@ def wf_Elnes_Xanes_K_edge(structure, c=None):
     metadata.update({"absorbing_atom_idx": str(absorbing_atom)})
 
     wf = get_wf_eels(absorbing_atom, structure, edge="K", feff_cmd=feff_cmd, db_file=db_file,
-                     metadata=metadata, user_tag_settings=user_tag_settings, use_primitive=False,
-                     add_xas="XANES", use_primitive=True)
+                     metadata=metadata, user_tag_settings=user_tag_settings, use_primitive=True,
+                     add_xas="XANES")
     return wf

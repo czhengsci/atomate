@@ -163,6 +163,7 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
     """
     if use_primitive:
         structure = structure.get_primitive_structure()
+        metadata["use_primitive"] = use_primitive
 
     # get the absorbing atom site index/indices
     ab_atom_indices = get_absorbing_atom_indices(structure, absorbing_atom)
@@ -190,6 +191,7 @@ def get_wf_eels(absorbing_atom, structure=None, feff_input_set="pymatgen.io.feff
                           override_default_feff_params=override_default_feff_params)
         fws.append(fw_eels)
         if add_xas:
+            fw_metadata["add_xas"] = add_xas
             fw_name = "{}-{}-{}-{}".format(add_xas, edge, ab_idx, ab_atom_symbol)
             wfname = "{}:{}:{}:{}".format(structure.composition.reduced_formula,
                                           "{}-{} spectroscopy".format(spectrum_type, add_xas),
