@@ -99,7 +99,7 @@ class AddPathsToFilepadTask(FiretaskBase):
     Optional_params:
         labels (list): list of labels to tag the inserted files. Useful for querying later.
         filepad_file (str): path to the filepad connection settings file.
-        compress (bool): wether or not to compress the file contents before insertion.
+        compress (bool): whether or not to compress the file contents before insertion.
         metadata (dict): metadata.
     """
 
