@@ -122,12 +122,11 @@ class AddModuleOutputsToFilepadTask(FiretaskBase):
     Insert the module outputs (default to be pot.bin, phase.bin, xsect.dat) to gridfs and filepad
     Required_params:
         module_outputs (list): List of output files insert into gridfs using filepad
-        calc_parameters (dict): Parameters used in those outputs calculation, critical for retrieving the
-                                corrected and matching intermediate output files.
+        output_identifier (str/list): Identifier label(s) to tag the inserted module output files. Useful
+                                    for querying later.
 
     Optional_params:
-        calc_identifier (str/list): Identifier label(s) to tag the inserted module output files. Useful
-                                    for querying later.
+
         filepad_file (str): path to the filepad connection settings file.
         compress (bool): whether or not to compress the file contents before insertion.
         calc_dir (str): path to dir (on current filesystem) that contains FEFF output files.
@@ -136,7 +135,7 @@ class AddModuleOutputsToFilepadTask(FiretaskBase):
                         recent calc_loc with the matching name
         metadata (dict): metadata.
     """
-    required_params = ["module_outputs", "calc_identifier"]
+    required_params = ["module_outputs", "output_identifier"]
     optional_params = ["filepad_file", "compress", "metadata", "calc_dir", "calc_loc"]
 
     def run_task(self, fw_spec):
@@ -149,7 +148,7 @@ class AddModuleOutputsToFilepadTask(FiretaskBase):
         logger.info("PARSING DIRECTORY: {}".format(calc_dir))
 
         module_outputs = self["module_outputs"]
-        labels = self["calc_identifier"]
+        labels = self["output_identifier"]
         metadata = self.get("metadata", dict())
 
         tags = Tags.from_file(glob(os.path.join(calc_dir, "feff.inp"))[0])
