@@ -6,6 +6,7 @@ import json
 import os
 from datetime import datetime
 from glob import glob
+import six
 
 import numpy as np
 
@@ -20,8 +21,8 @@ from atomate.common.firetasks.glue_tasks import get_calc_loc
 from atomate.utils.utils import get_logger
 from atomate.feff.database import FeffCalcDb
 
-__author__ = 'Kiran Mathew'
-__email__ = 'kmathew@lbl.gov'
+__author__ = 'Kiran Mathew, Chen Zheng'
+__email__ = 'kmathew@lbl.gov, chz022@ucsd.edu'
 
 logger = get_logger(__name__)
 
@@ -112,4 +113,62 @@ class AddPathsToFilepadTask(FiretaskBase):
         for i, p in enumerate(paths):
             l = labels[i] if labels is not None else None
             fpad.add_file(p, l, metadata=self.get("metadata", None),
+                          compress=self.get("compress", True))
+
+
+@explicit_serialize
+class AddModuleOutputsToFilepadTask(FiretaskBase):
+    """
+    Insert the module outputs (default to be pot.bin, phase.bin, xsect.dat) to gridfs and filepad
+    Required_params:
+        module_outputs (list): List of output files insert into gridfs using filepad
+        calc_parameters (dict): Parameters used in those outputs calculation, critical for retrieving the
+                                corrected and matching intermediate output files.
+
+    Optional_params:
+        calc_identifier (str/list): Identifier label(s) to tag the inserted module output files. Useful
+                                    for querying later.
+        filepad_file (str): path to the filepad connection settings file.
+        compress (bool): whether or not to compress the file contents before insertion.
+        calc_dir (str): path to dir (on current filesystem) that contains FEFF output files.
+                        Default: use current working directory.
+        calc_loc (str OR bool): if True will set most recent calc_loc. If str search for the most
+                        recent calc_loc with the matching name
+        metadata (dict): metadata.
+    """
+    required_params = ["module_outputs", "calc_identifier"]
+    optional_params = ["filepad_file", "compress", "metadata", "calc_dir", "calc_loc"]
+
+    def run_task(self, fw_spec):
+        calc_dir = os.getcwd()
+        if "calc_dir" in self:
+            calc_dir = self["calc_dir"]
+        elif self.get("calc_loc"):
+            calc_dir = get_calc_loc(self["calc_loc"], fw_spec["calc_locs"])["path"]
+
+        logger.info("PARSING DIRECTORY: {}".format(calc_dir))
+
+        module_outputs = self["module_outputs"]
+        labels = self["calc_identifier"]
+        metadata = self.get("metadata", dict())
+
+        tags = Tags.from_file(glob(os.path.join(calc_dir, "feff.inp"))[0])
+        metadata["input_parameters"] = tags.as_dict()
+        outputs_list = []
+        for index, output in enumerate(module_outputs):
+            output_subdict = dict()
+            output_subdict["file_path"] = glob(os.path.join(calc_dir, output)[0])
+            output_subdict["original_file_name"] = os.path.basename(output_subdict["file_path"])
+
+            if isinstance(labels, six.string_types):
+                output_subdict["file_label"] = '-'.join((labels, output_subdict["original_file_name"]))
+            elif isinstance(labels, (list,)):
+                output_subdict["file_label"] = labels[index]
+            outputs_list.append(output_subdict)
+
+        fpad = get_fpad(self.get("filepad_file", None))
+        for output_file in outputs_list:
+            insert_file_path = output_file["file_path"]
+            insert_file_label = output_file["file_label"]
+            fpad.add_file(insert_file_path, insert_file_label, metadata=metadata,
                           compress=self.get("compress", True))
