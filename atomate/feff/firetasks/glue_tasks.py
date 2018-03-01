@@ -71,7 +71,7 @@ class DbQueryModuleOutputs(FiretaskBase):
 
         #Process the input parameters and make them into pymongo nested fields for query purpose
         calc_inputparams = self.get("calc_inputparams", None)
-        calc_inputparams_nest = self.get("inputparams_nest", None)
+        calc_inputparams_nest = self.get("calc_inputparams_nest", None)
         if calc_inputparams and calc_inputparams_nest:
             for k, v in calc_inputparams.items():
                 if isinstance(calc_inputparams_nest, six.string_types):
