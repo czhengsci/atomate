@@ -61,7 +61,7 @@ class DbQueryModuleOutputs(FiretaskBase):
     def run_task(self, fw_spec):
         query_outputs = self["query_outputs"]
         output_labels = self["output_identifier"]
-        fpad = get_fpad(self.get("filepad_file"), None)
+        fpad = get_fpad(self.get("filepad_file", None))
         metaquery = self.get("metaquery", None)
 
         query_identifiers = []
