@@ -156,7 +156,7 @@ class AddModuleOutputsToFilepadTask(FiretaskBase):
         outputs_list = []
         for index, output in enumerate(module_outputs):
             output_subdict = dict()
-            output_subdict["file_path"] = glob(os.path.join(calc_dir, output)[0])
+            output_subdict["file_path"] = glob(os.path.join(calc_dir, output))[0]
             output_subdict["original_file_name"] = os.path.basename(output_subdict["file_path"])
 
             if isinstance(labels, six.string_types):
