@@ -56,13 +56,33 @@ class DbQueryModuleOutputs(FiretaskBase):
     Optional_params:
         filepad_file (str): path to the filepad connection settings file.
         metaquery (dict): Other pymongo query conditions in dict format
+        calc_inputparams (dict): Input parameters of calculation used for query results filtering
+        calc_inputparams_nest (str/list): Nested fields of calculation input parameters.
+                                e.g. if one input parameters is nested as <field1>.<field2>.<param1>:<value1>,
+                                the calc_inputparams_nest should be [field1, field2]. This is a temporary
+                                solution as dotted field is not valid for mongodb's storage.
     """
 
     def run_task(self, fw_spec):
         query_outputs = self["query_outputs"]
         output_labels = self["output_identifier"]
         fpad = get_fpad(self.get("filepad_file", None))
-        metaquery = self.get("metaquery", None)
+        metaquery = self.get("metaquery", dict())
+
+        #Process the input parameters and make them into pymongo nested fields for query purpose
+        calc_inputparams = self.get("calc_inputparams", None)
+        calc_inputparams_nest = self.get("inputparams_nest", None)
+        if calc_inputparams and calc_inputparams_nest:
+            for k, v in calc_inputparams.items():
+                if isinstance(calc_inputparams_nest, six.string_types):
+                    query_key = ".".join((calc_inputparams_nest, k))
+                elif isinstance(calc_inputparams_nest, (list,)):
+                    query_key = '.'.join((".".join(calc_inputparams_nest), k))
+                metaquery[query_key] = v
+        elif calc_inputparams and not calc_inputparams_nest:
+            metaquery = {**metaquery, **calc_inputparams}
+
+        logger.info("metaquery information is {}".format(metaquery))
 
         query_identifiers = []
         fw_mod_spec = {'_push_all':dict()}
