@@ -152,7 +152,8 @@ class AddModuleOutputsToFilepadTask(FiretaskBase):
         metadata = self.get("metadata", dict())
 
         tags = Tags.from_file(glob(os.path.join(calc_dir, "feff.inp"))[0])
-        metadata["input_parameters"] = tags.as_dict()
+        # metadata["input_parameters"] = tags.as_dict()
+        metadata = {**metadata, **tags}
         outputs_list = []
         for index, output in enumerate(module_outputs):
             output_subdict = dict()
