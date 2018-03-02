@@ -15,8 +15,8 @@ from fireworks import FiretaskBase, explicit_serialize
 
 from atomate.utils.utils import load_class
 
-__author__ = 'Kiran Mathew'
-__email__ = 'kmathew@lbl.gov'
+__author__ = 'Kiran Mathew, Chen Zheng'
+__email__ = 'kmathew@lbl.gov, chz022@ucsd.edu'
 
 
 @explicit_serialize
@@ -90,6 +90,42 @@ class WriteXASIOSetFromPrev(FiretaskBase):
         feff_input_set = get_feff_input_set_obj(self["xas_type"], self["absorbing_atom"],
                                                 self["structure"], self.get("radius", 10.0),
                                                 **other_params)
+        feff_input_set.write_input(".")
+
+
+@explicit_serialize
+class WriteXASOutputTemp(FiretaskBase):
+    """
+    This is a temporary Firetask class used for generation of FEFF input (feff.inp)
+    from the given InputSet object or InputSet name. In the first step, it will check whether
+    previous output files existing or not. If previous output files exist, the CONTROL card of
+    feff_input_set will be change accordingly.
+
+    Required_params:
+        absorbing_atom (str): absorbing atom symbol
+        structure (Structure): input structure
+        feff_input_set (str or FeffDictSet subclass): The inputset for setting params. If string
+            then either the entire path to the class or the spectrum type must be provided
+            e.g. "pymatgen.io.feff.sets.MPXANESSet" or "XANES"
+
+    Optional_params:
+        radius (float): cluster radius in angstroms
+        other_params (dict): **kwargs to pass into the desired InputSet if using str feff_input_set
+    """
+    required_params = ["absorbing_atom", "structure", "feff_input_set"]
+    optional_params = ["radius", "other_params"]
+
+    def run_task(self, fw_spec):
+        feff_input_set = get_feff_input_set_obj(self["feff_input_set"], absorbing_atom=self["absorbing_atom"],
+                                                structure=self["structure"], radius=self.get("radius", 10.0),
+                                                user_tag_settings=self.get("other_params", {}))
+        current_dir = os.getcwd()
+
+        if os.path.isfile(os.path.join(current_dir, 'pot.bin')):
+            ori_control_card = feff_input_set.config_dict["CONTROL"].split(" ")
+            ori_control_card[0] = "0"
+            feff_input_set.config_dict["CONTROL"] = " ".join(ori_control_card)
+
         feff_input_set.write_input(".")
 
 

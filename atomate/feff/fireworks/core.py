@@ -59,7 +59,8 @@ class XASFW(Firework):
                                            other_params=override_default_feff_params))
         else:
             t.append(WriteFeffFromIOSet(absorbing_atom=absorbing_atom, structure=structure,
-                                        radius=radius, feff_input_set=feff_input_set))
+                                        radius=radius, feff_input_set=feff_input_set,
+                                        other_params=override_default_feff_params))
 
         t.extend(
             [
