@@ -106,6 +106,7 @@ class DbQueryModuleOutputs(FiretaskBase):
             if len(query_results)>=0:
                 with open(sub_query["filename"],"wb") as f:
                     f.write(query_results[0][0])
+                output_name_pseudo = sub_query["filename"].replace('.', "-")
                 fw_mod_spec['_push_all'][sub_query["filename"]] = True
 
         logger.info("Output files queried from database: {}".format(fw_mod_spec['_push_all']))
