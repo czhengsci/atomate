@@ -7,6 +7,11 @@ import os
 from datetime import datetime
 from glob import glob
 import six
+import time
+import logging
+import re
+from matgendb.util import get_database
+import subprocess
 
 import numpy as np
 
@@ -24,6 +29,7 @@ from atomate.feff.database import FeffCalcDb
 __author__ = 'Kiran Mathew, Chen Zheng'
 __email__ = 'kmathew@lbl.gov, chz022@ucsd.edu'
 
+logging.basicConfig(filename="feff_run.log", level=logging.INFO)
 logger = get_logger(__name__)
 
 
@@ -117,26 +123,29 @@ class AddPathsToFilepadTask(FiretaskBase):
 
 
 @explicit_serialize
-class AddModuleOutputsToFilepadTask(FiretaskBase):
+class AddModuleOutputsToStorageTask(FiretaskBase):
     """
-    Insert the module outputs (default to be pot.bin, phase.bin, xsect.dat) to gridfs and filepad
+    Insert the module outputs (default to be pot.bin, phase.bin, xsect.dat) to storage system using rclone
     Required_params:
-        module_outputs (list): List of output files insert into gridfs using filepad
+        module_outputs (list): List of output intermediate files need to be kept in cloud storage.
         output_identifier (str/list): Identifier label(s) to tag the inserted module output files. Useful
                                     for querying later.
+        rclone_remote (str): The remote name used in rclone sync command
+        rclone_destpath (str): The destination path rclone will sync to.
+        index_collection (str): Name of the collection in Mongodb stores information, i.e calculation parameters,
+                                file pathways, etc., of calculated intermediate file..
+        indexdb_settings (str): File path to json file used for index database connection setup
 
     Optional_params:
-
-        filepad_file (str): path to the filepad connection settings file.
-        compress (bool): whether or not to compress the file contents before insertion.
+        metadata (dict): metadata.
         calc_dir (str): path to dir (on current filesystem) that contains FEFF output files.
                         Default: use current working directory.
         calc_loc (str OR bool): if True will set most recent calc_loc. If str search for the most
                         recent calc_loc with the matching name
-        metadata (dict): metadata.
     """
-    required_params = ["module_outputs", "output_identifier"]
-    optional_params = ["filepad_file", "compress", "metadata", "calc_dir", "calc_loc"]
+    required_params = ["module_outputs", "output_identifier", "rclone_remote", "rclone_destpath", "index_collection",
+                       "indexdb_settings"]
+    optional_params = ["metadata", "calc_dir", "calc_loc"]
 
     def run_task(self, fw_spec):
         calc_dir = os.getcwd()
@@ -148,27 +157,72 @@ class AddModuleOutputsToFilepadTask(FiretaskBase):
         logger.info("PARSING DIRECTORY: {}".format(calc_dir))
 
         module_outputs = self["module_outputs"]
-        labels = self["output_identifier"]
+        rclone_remote_name = self["rclone_remote"]
+        rclone_destpath = self["rclone_destpath"]
         metadata = self.get("metadata", dict())
+
+        if isinstance(self["output_identifier"], six.string_types):
+            labels = self["output_identifier"]
+        elif isinstance(self["output_identifier"], (list,)):
+            labels = '-'.join(self["output_identifier"])
 
         tags = Tags.from_file(glob(os.path.join(calc_dir, "feff.inp"))[0])
         metadata["input_parameters"] = tags.as_dict()
-        # metadata = {**metadata, **tags}
-        outputs_list = []
-        for index, output in enumerate(module_outputs):
-            output_subdict = dict()
-            output_subdict["file_path"] = glob(os.path.join(calc_dir, output))[0]
-            output_subdict["original_file_name"] = os.path.basename(output_subdict["file_path"])
 
-            if isinstance(labels, six.string_types):
-                output_subdict["file_label"] = '-'.join((labels, output_subdict["original_file_name"]))
-            elif isinstance(labels, (list,)):
-                output_subdict["file_label"] = labels[index]
-            outputs_list.append(output_subdict)
+        # Need to check whether the FEFF run's SCF calculation converge. If not, no need for intermediate
+        # file storage
+        converge_pattern = re.compile('Convergence reached.*')
+        not_converge_pattern = re.compile('Convergence not reached.*')
+        log1data_path = glob(os.path.join(calc_dir, "log1.dat"))[0]
+        scf_converged = False
+        for i, line in enumerate(open(log1data_path)):
+            if len(not_converge_pattern.findall(line)) > 0:
+                scf_converged = False
+                break
+            if len(converge_pattern.findall(line)) > 0:
+                scf_converged = True
 
-        fpad = get_fpad(self.get("filepad_file", None))
-        for output_file in outputs_list:
-            insert_file_path = output_file["file_path"]
-            insert_file_label = output_file["file_label"]
-            fpad.add_file(insert_file_path, insert_file_label, metadata=metadata,
-                          compress=self.get("compress", True))
+        if scf_converged:
+            index_db_connection = get_database(self["indexdb_settings"], admin=True)
+
+            # Searching indexdb using the labels and input_parameters of metadata.
+            identifier_pattern = re.compile("{}.*".format(labels))
+            cal_cursor = index_db_connection[self["index_collection"]].find({"identifier": identifier_pattern,
+                                                                             "metadata.input_parameters": metadata[
+                                                                                 "input_parameters"]})
+
+            if cal_cursor.count() == 0:
+                timestr = time.strftime("%Y%m%d-%H%M%S")
+                output_subdict = dict()
+                output_subdict["metadata"] = metadata
+                output_subdict["identifier"] = "-".join((labels, timestr))
+                remote_storage_folder = ":".joins((rclone_remote_name, rclone_destpath)) + "/" + output_subdict[
+                    "identifier"]
+
+                # rclone and store individual intermediate files
+                output_subdict["intermediate_files"] = []
+                for _, output in enumerate(module_outputs):
+                    inter_subdict = dict()
+                    inter_subdict["file_path"] = glob(os.path.join(calc_dir, output))[0]
+                    inter_subdict["original_file_name"] = os.path.basename(inter_subdict["file_path"])
+                    inter_subdict["file_storage_path"] = "/".join(
+                        (remote_storage_folder, inter_subdict["original_file_name"]))
+
+                    rclone_sync_command = ["rclone", "sync", inter_subdict["file_path"],
+                                           inter_subdict["file_storage_path"]]
+                    return_code = subprocess.call(rclone_sync_command)
+                    logger.info("Stored intermediate file: {}. Storage path: {}. Return code: {}".format(
+                        inter_subdict["original_file_name"],
+                        inter_subdict["file_storage_path"], return_code))
+
+                    output_subdict["intermediate_files"].append(inter_subdict)
+
+                index_db_connection[self["index_collection"]].update_one({"identifier": output_subdict["identifier"]},
+                                                                         {"$set": output_subdict}, upsert=True)
+            elif cal_cursor.count() > 0:
+                logger.info(
+                    "Intermediate file of {} already existed in the database. Calculation input parameters are {}".format(
+                        labels, metadata["input_parameters"]))
+
+        elif not scf_converged:
+            logger.info("The SCF calculation of FEFF run does not converge.")
