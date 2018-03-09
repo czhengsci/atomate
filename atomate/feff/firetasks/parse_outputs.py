@@ -196,7 +196,7 @@ class AddModuleOutputsToStorageTask(FiretaskBase):
                 output_subdict = dict()
                 output_subdict["metadata"] = metadata
                 output_subdict["identifier"] = "-".join((labels, timestr))
-                remote_storage_folder = ":".joins((rclone_remote_name, rclone_destpath)) + "/" + output_subdict[
+                remote_storage_folder = ":".join((rclone_remote_name, rclone_destpath)) + "/" + output_subdict[
                     "identifier"]
 
                 # rclone and store individual intermediate files
