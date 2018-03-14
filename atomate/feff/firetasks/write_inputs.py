@@ -120,12 +120,18 @@ class WriteXASOutputTemp(FiretaskBase):
                                                 structure=self["structure"], radius=self.get("radius", 10.0),
                                                 user_tag_settings=self.get("other_params", {}))
         current_dir = os.getcwd()
+        ori_control_card = feff_input_set.config_dict["CONTROL"].split(" ")
 
         if os.path.isfile(os.path.join(current_dir, 'pot.bin')):
-            ori_control_card = feff_input_set.config_dict["CONTROL"].split(" ")
             ori_control_card[0] = "0"
-            feff_input_set.config_dict["CONTROL"] = " ".join(ori_control_card)
 
+
+        if os.path.isfile(os.path.join(current_dir, 'xsect.dat')) and \
+                os.path.isfile(os.path.join(current_dir, 'phase.bin')) and \
+                        ori_control_card[0] == "0":
+            ori_control_card[1] = "0" 
+
+        feff_input_set.config_dict["CONTROL"] = " ".join(ori_control_card)
         feff_input_set.write_input(".")
 
 
