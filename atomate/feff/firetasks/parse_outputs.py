@@ -335,11 +335,11 @@ class AddModuleOutputsToStorageTask(FiretaskBase):
                 output_subdict["feffinput"]["feffinput_storage_path"] =  "/".join(
                         (remote_storage_folder, "feff.inp"))
                 rclone_sync_command = ["rclone", "sync", output_subdict["feffinput"]["file_path"],
-                                       output_subdict["file_storage_path"]]
+                                       output_subdict["feffinput"]["feffinput_storage_path"]]
                 return_code = subprocess.call(rclone_sync_command)
                 logger.info("Stored feff.inp file: {}. Storage path: {}. Return code: {}".format(
-                    output_subdict["original_file_name"],
-                    output_subdict["file_storage_path"], return_code))
+                    output_subdict["feffinput"]["original_file_name"],
+                    output_subdict["feffinput"]["feffinput_storage_path"], return_code))
 
                 #Storage dos files is LDOS in feff.inp
                 if "LDOS" in tags:
