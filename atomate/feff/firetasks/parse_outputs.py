@@ -189,7 +189,7 @@ class AddPathsToStorageTask(FiretaskBase):
                 subpath_dict = dict()
                 subpath_dict["file_path"] = glob(os.path.join(calc_dir, path))[0]
                 subpath_dict["original_file_name"] = os.path.basename(subpath_dict["file_path"])
-                subpath_dict["file_storage_path"] = "/".joins(
+                subpath_dict["file_storage_path"] = "/".join(
                     (remote_storage_folder, subpath_dict["original_file_name"]))
                 rclone_sync_command = ["rclone", "sync", subpath_dict["file_path"],
                                        subpath_dict["file_storage_path"]]
@@ -351,7 +351,7 @@ class AddModuleOutputsToStorageTask(FiretaskBase):
                         subdos_dict = dict()
                         subdos_dict["file_path"] = ldos
                         subdos_dict["original_file_name"] = os.path.basename(ldos)
-                        subdos_dict["file_storage_path"] = "/".joins(
+                        subdos_dict["file_storage_path"] = "/".join(
                             (remote_storage_folder, subdos_dict["original_file_name"]))
                         rclone_sync_command = ["rclone", "sync", subdos_dict["file_path"],
                                                subdos_dict["file_storage_path"]]
