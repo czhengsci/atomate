@@ -129,7 +129,7 @@ class WriteXASOutputTemp(FiretaskBase):
         if os.path.isfile(os.path.join(current_dir, 'xsect.dat')) and \
                 os.path.isfile(os.path.join(current_dir, 'phase.bin')) and \
                         ori_control_card[0] == "0":
-            ori_control_card[1] = "0" 
+            ori_control_card[1] = "0"
 
         feff_input_set.config_dict["CONTROL"] = " ".join(ori_control_card)
         feff_input_set.write_input(".")
