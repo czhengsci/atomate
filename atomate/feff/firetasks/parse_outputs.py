@@ -173,7 +173,7 @@ class AddPathsToStorageTask(FiretaskBase):
         cal_cursor = index_db_connection[self["index_collection"]].find({"identifier": identifier_pattern,
                                                                          "metadata.input_parameters": metadata[
                                                                              "input_parameters"]})
-        paths = glob("feff????.dat")
+        paths = sorted(glob("feff????.dat"))
 
         if cal_cursor.count() == 0:
             timestr = time.strftime("%Y%m%d-%H%M%S")
@@ -346,7 +346,7 @@ class AddModuleOutputsToStorageTask(FiretaskBase):
                     output_subdict["ldos"]["emax"] = tags["LDOS"][1]
                     output_subdict["ldos"]["eimag"] = tags["LDOS"][2]
                     output_subdict["ldos"]["dos_files"] = []
-                    ldos_dat = glob(os.path.join(calc_dir, "ldos??.dat"))
+                    ldos_dat = sorted(glob(os.path.join(calc_dir, "ldos??.dat")))
                     for ldos in ldos_dat:
                         subdos_dict = dict()
                         subdos_dict["file_path"] = ldos
