@@ -123,6 +123,135 @@ class AddPathsToFilepadTask(FiretaskBase):
 
 
 @explicit_serialize
+class AddPathsToStorageTask(FiretaskBase):
+    """
+    Insert the module outputs (default to be pot.bin, phase.bin, xsect.dat) to storage system using rclone
+    Required_params:
+        output_identifier (str/list): Identifier label(s) to tag the inserted module output files. Useful
+                                    for querying later.
+        index_collection (str): Name of the collection in Mongodb stores information, i.e calculation parameters,
+                                file pathways, etc., of calculated intermediate file..
+        indexdb_settings (str): File path to json file used for index database connection setup
+
+    Optional_params:
+        metadata (dict): metadata.
+        rclone_remote (str): The remote name used in rclone sync command
+        rclone_destpath (str): The destination path rclone will sync to.
+        calc_dir (str): path to dir (on current filesystem) that contains FEFF output files.
+                        Default: use current working directory.
+        calc_loc (str OR bool): if True will set most recent calc_loc. If str search for the most
+                        recent calc_loc with the matching name
+    """
+    required_params = ["output_identifier", "index_collection",
+                       "indexdb_settings"]
+    optional_params = ["metadata", "rclone_remote", "rclone_destpath", "calc_dir", "calc_loc"]
+
+    def run_task(self, fw_spec):
+        calc_dir = os.getcwd()
+        if "calc_dir" in self:
+            calc_dir = self["calc_dir"]
+        elif self.get("calc_loc"):
+            calc_dir = get_calc_loc(self["calc_loc"], fw_spec["calc_locs"])["path"]
+
+        logger.info("PARSING DIRECTORY: {}".format(calc_dir))
+
+        module_outputs = self["module_outputs"]
+        rclone_remote_name = self["rclone_remote"]
+        rclone_destpath = self["rclone_destpath"]
+        metadata = self.get("metadata", dict())
+
+        if isinstance(self["output_identifier"], six.string_types):
+            labels = self["output_identifier"]
+        elif isinstance(self["output_identifier"], (list,)):
+            labels = '-'.join(self["output_identifier"])
+
+        tags = Tags.from_file(glob(os.path.join(calc_dir, "feff.inp"))[0])
+        metadata["input_parameters"] = tags.as_dict()
+
+        index_db_connection = get_database(self["indexdb_settings"], admin=True)
+
+        # Searching indexdb using the labels and input_parameters of metadata.
+        identifier_pattern = re.compile("{}.*".format(labels))
+        cal_cursor = index_db_connection[self["index_collection"]].find({"identifier": identifier_pattern,
+                                                                         "metadata.input_parameters": metadata[
+                                                                             "input_parameters"]})
+        paths = glob("feff????.dat")
+
+        if cal_cursor.count() == 0:
+            timestr = time.strftime("%Y%m%d-%H%M%S")
+            output_subdict = dict()
+            output_subdict["metadata"] = metadata
+            output_subdict["identifier"] = "-".join((labels, timestr))
+            remote_storage_folder = ":".join((rclone_remote_name, rclone_destpath)) + "/" + output_subdict[
+                "identifier"]
+
+            # rclone and store individual FEFF path files
+            output_subdict["feffpaths"] = []
+            for path in paths:
+                subpath_dict = dict()
+                subpath_dict["file_path"] = glob(os.path.join(calc_dir, path))[0]
+                subpath_dict["original_file_name"] = os.path.basename(subpath_dict["file_path"])
+                subpath_dict["file_storage_path"] = "/".joins(
+                    (remote_storage_folder, subpath_dict["original_file_name"]))
+                rclone_sync_command = ["rclone", "sync", subpath_dict["file_path"],
+                                       subpath_dict["file_storage_path"]]
+                return_code = subprocess.call(rclone_sync_command)
+
+                if return_code != 0:
+                    logger.info("{} path uploading failed with return code {}.".format(path, return_code))
+                    if not ("feff_failed_upload" in output_subdict):
+                        output_subdict["feff_failed_upload"] = []
+                    output_subdict["feff_failed_upload"].append(subpath_dict)
+                elif return_code == 0:
+                    output_subdict["feffpaths"].append(subpath_dict)
+
+            index_db_connection[self["index_collection"]].update_one({"identifier": output_subdict["identifier"]},
+                                                                     {"$set": output_subdict}, upsert=True)
+
+        elif cal_cursor.count() > 0:
+            existed_entry = cal_cursor.next()
+            inter_files = existed_entry["intermediate_files"]
+            storage_dir_paths = []
+            for _sub in inter_files:
+                storage_dir_paths.append(_sub["file_storage_path"].rstrip('/' + _sub["original_file_name"]))
+
+            if len(np.unique(storage_dir_paths)) == 1:
+                remote_storage_folder = storage_dir_paths[0]
+                feffpath_field = []
+                for path in paths:
+                    subpath_dict = dict()
+                    subpath_dict["file_path"] = glob(os.path.join(calc_dir, path))[0]
+                    subpath_dict["original_file_name"] = os.path.basename(subpath_dict["file_path"])
+                    subpath_dict["file_storage_path"] = "/".join((remote_storage_folder,
+                                                                  subpath_dict["original_file_name"]))
+                    rclone_sync_command = ["rclone", "sync", subpath_dict["file_path"],
+                                           subpath_dict["file_storage_path"]]
+                    return_code = subprocess.call(rclone_sync_command)
+                    if return_code != 0:
+                        logger.info("{} path uploading failed with return code {}.".format(path, return_code))
+                        if not ("feff_failed_upload" in existed_entry):
+                            existed_entry["feff_failed_upload"] = []
+                            existed_entry["feff_failed_upload"].append(subpath_dict)
+                    elif return_code == 0:
+                        feffpath_field.append(subpath_dict)
+
+                index_db_connection[self["index_collection"]].update_one({"identifier": identifier_pattern,
+                                                                          "metadata.input_parameters": metadata[
+                                                                              "input_parameters"]},
+                                                                         {"$set": {"feffpaths": feffpath_field}})
+                if "feff_failed_upload" in existed_entry:
+                    index_db_connection[self["index_collection"]].update_one({"identifier": identifier_pattern,
+                                                                              "metadata.input_parameters": metadata[
+                                                                                  "input_parameters"]},
+                                                                             {"$set": {
+                                                                                 "feff_failed_upload": existed_entry[
+                                                                                     "feff_failed_upload"]}})
+
+            else:
+                raise ValueError("Intermediate files's storage paths are inconsistent.")
+
+
+@explicit_serialize
 class AddModuleOutputsToStorageTask(FiretaskBase):
     """
     Insert the module outputs (default to be pot.bin, phase.bin, xsect.dat) to storage system using rclone
@@ -198,6 +327,39 @@ class AddModuleOutputsToStorageTask(FiretaskBase):
                 output_subdict["identifier"] = "-".join((labels, timestr))
                 remote_storage_folder = ":".join((rclone_remote_name, rclone_destpath)) + "/" + output_subdict[
                     "identifier"]
+
+                #Storage feff.inp files
+                output_subdict["feffinput"] = dict()
+                output_subdict["feffinput"]["file_path"] = glob(os.path.join(calc_dir, "feff.inp"))[0]
+                output_subdict["feffinput"]["original_file_name"] = "feff.inp"
+                output_subdict["feffinput"]["feffinput_storage_path"] =  "/".join(
+                        (remote_storage_folder, "feff.inp"))
+                rclone_sync_command = ["rclone", "sync", output_subdict["feffinput"]["file_path"],
+                                       output_subdict["file_storage_path"]]
+                return_code = subprocess.call(rclone_sync_command)
+                logger.info("Stored feff.inp file: {}. Storage path: {}. Return code: {}".format(
+                    output_subdict["original_file_name"],
+                    output_subdict["file_storage_path"], return_code))
+
+                #Storage dos files is LDOS in feff.inp
+                if "LDOS" in tags:
+                    output_subdict["ldos"] = dict()
+                    output_subdict["ldos"]["emin"] = tags["ldos"][0]
+                    output_subdict["ldos"]["emax"] = tags["ldos"][1]
+                    output_subdict["ldos"]["eimag"] = tags["ldos"][2]
+                    output_subdict["ldos"]["dos_files"] = []
+                    ldos_dat = glob(os.path.join(calc_dir, "ldos??.dat"))
+                    for ldos in ldos_dat:
+                        subdos_dict = dict()
+                        subdos_dict["file_path"] = ldos
+                        subdos_dict["original_file_name"] = os.path.basename(ldos)
+                        subdos_dict["file_storage_path"] = "/".joins(
+                            (remote_storage_folder, subdos_dict["original_file_name"]))
+                        rclone_sync_command = ["rclone", "sync", subdos_dict["file_path"],
+                                               subdos_dict["file_storage_path"]]
+                        return_code = subprocess.call(rclone_sync_command)
+                        output_subdict["ldos`"]["dos_files"].append(subdos_dict)
+
 
                 # rclone and store individual intermediate files
                 output_subdict["intermediate_files"] = []
