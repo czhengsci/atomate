@@ -142,8 +142,7 @@ class AddPathsToStorageTask(FiretaskBase):
         calc_loc (str OR bool): if True will set most recent calc_loc. If str search for the most
                         recent calc_loc with the matching name
     """
-    required_params = ["output_identifier", "index_collection",
-                       "indexdb_settings"]
+    required_params = ["output_identifier", "index_collection","indexdb_settings"]
     optional_params = ["metadata", "rclone_remote", "rclone_destpath", "calc_dir", "calc_loc"]
 
     def run_task(self, fw_spec):
@@ -155,7 +154,6 @@ class AddPathsToStorageTask(FiretaskBase):
 
         logger.info("PARSING DIRECTORY: {}".format(calc_dir))
 
-        module_outputs = self["module_outputs"]
         rclone_remote_name = self["rclone_remote"]
         rclone_destpath = self["rclone_destpath"]
         metadata = self.get("metadata", dict())
@@ -344,9 +342,9 @@ class AddModuleOutputsToStorageTask(FiretaskBase):
                 #Storage dos files is LDOS in feff.inp
                 if "LDOS" in tags:
                     output_subdict["ldos"] = dict()
-                    output_subdict["ldos"]["emin"] = tags["ldos"][0]
-                    output_subdict["ldos"]["emax"] = tags["ldos"][1]
-                    output_subdict["ldos"]["eimag"] = tags["ldos"][2]
+                    output_subdict["ldos"]["emin"] = tags["LDOS"][0]
+                    output_subdict["ldos"]["emax"] = tags["LDOS"][1]
+                    output_subdict["ldos"]["eimag"] = tags["LDOS"][2]
                     output_subdict["ldos"]["dos_files"] = []
                     ldos_dat = glob(os.path.join(calc_dir, "ldos??.dat"))
                     for ldos in ldos_dat:
@@ -358,7 +356,7 @@ class AddModuleOutputsToStorageTask(FiretaskBase):
                         rclone_sync_command = ["rclone", "sync", subdos_dict["file_path"],
                                                subdos_dict["file_storage_path"]]
                         return_code = subprocess.call(rclone_sync_command)
-                        output_subdict["ldos`"]["dos_files"].append(subdos_dict)
+                        output_subdict["ldos"]["dos_files"].append(subdos_dict)
 
 
                 # rclone and store individual intermediate files
