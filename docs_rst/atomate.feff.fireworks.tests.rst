@@ -4,8 +4,8 @@ atomate.feff.fireworks.tests package
 Submodules
 ----------
 
-atomate.feff.fireworks.tests.test_fireworks module
---------------------------------------------------
+atomate.feff.fireworks.tests.test\_fireworks module
+---------------------------------------------------
 
 .. automodule:: atomate.feff.fireworks.tests.test_fireworks
     :members:

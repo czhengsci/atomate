@@ -2,6 +2,74 @@
 atomate Changelog
 =================
 
+**v0.7.5**
+
+* standardize drones to datetime.utcnow() (J. Montoya)
+* fixed additional field serialization issue (J. Montoya)
+* fix defuse_unsuccessful logic, hat tip to @specter119 for pointing it out (A. Jain)
+* some doc updates (A. Jain)
+
+**v0.7.4**
+
+* fix pymatgen dep (A. Jain)
+
+**v0.7.3**
+
+* minor drones updates (S. Dwaraknath)
+* installation fix (P. Huck)
+
+**v0.7.2**
+
+* Bugfix database getter in builders (S. Dwaraknath)
+
+**v0.7.1**
+
+* update ``atwf`` to find the path to workflows better (M. Dias Costa)
+* better surface workflow naming (A. Jain)
+
+**v0.7.0**
+
+* change default behavior when a run looks OK but is unconverged (A. Jain)
+* Some test and code cleanups (S. Dwaraknath, J. Montoya)
+* update to FW names when no structure provided (S. Dwaraknath)
+* remove boltons dependency (A. Faghaninia)
+* fix max_force check for selective dynamics (J. Montoya)
+
+**v0.6.9**
+
+* update requirements to include boltons
+* bugfix for atwf (S. Dwaraknath)
+
+**v0.6.8**
+
+* New SCAN functional workflow (S. Dwaraknath)
+* remove dependence on pymatgen-db (S. Dwaraknath)
+* more bandgap properties parsed by drone (transition and is-direct) (S. Dwaraknath)
+* option to clean up large output files like WAVECAR (S. Dwaraknath)
+* option to recursively copy file tree in CopyFilesFromCalcLoc (A. Faghaninia)
+* bugfix: apply vasp_input_set_params when StaticFW have parents (specter119)
+* misc bugfixes (S. Dwaraknath, A. Jain)
+
+**v0.6.7**
+
+* New ferroelectrics workflow! (T. Smidt)
+* option to parse LOCPOT in VaspDrone (S. Dwaraknath)
+* rename set_fworker -> set_execution_option
+* more options for BoltztrapFW (A. Faghaninia)
+* misc. bugfixes (D. Broberg, K. Mathew, P. Huck)
+
+**v0.6.6**
+
+* powerup to preserve the same FWorker for all jobs in workflow (S. Dwaraknath)
+* DriftErrorHandler in VASP custodian jobs (S. Dwaraknath)
+* some FireTasks in anticipation of ferroelectrics workflow (T. Schmidt, A. Jain)
+
+**v0.6.5**
+
+* fix delta_volume_percent, set as new key and update FixTasksBuilder (B. Bocklund, A. Jain)
+* drone schema version reflects atomate version (M. Horton)
+* unit test fix (J. Montoya)
+
 **v0.6.4**
 
 * add config option for half_kpts_first and max force (A. Jain, S. Dwaraknath)

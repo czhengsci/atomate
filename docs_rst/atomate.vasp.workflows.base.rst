@@ -12,8 +12,8 @@ atomate.vasp.workflows.base.adsorption module
     :undoc-members:
     :show-inheritance:
 
-atomate.vasp.workflows.base.bulk_modulus module
------------------------------------------------
+atomate.vasp.workflows.base.bulk\_modulus module
+------------------------------------------------
 
 .. automodule:: atomate.vasp.workflows.base.bulk_modulus
     :members:
@@ -44,6 +44,14 @@ atomate.vasp.workflows.base.elastic module
     :undoc-members:
     :show-inheritance:
 
+atomate.vasp.workflows.base.ferroelectric module
+------------------------------------------------
+
+.. automodule:: atomate.vasp.workflows.base.ferroelectric
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 atomate.vasp.workflows.base.gibbs module
 ----------------------------------------
 
@@ -68,8 +76,8 @@ atomate.vasp.workflows.base.raman module
     :undoc-members:
     :show-inheritance:
 
-atomate.vasp.workflows.base.thermal_expansion module
-----------------------------------------------------
+atomate.vasp.workflows.base.thermal\_expansion module
+-----------------------------------------------------
 
 .. automodule:: atomate.vasp.workflows.base.thermal_expansion
     :members:

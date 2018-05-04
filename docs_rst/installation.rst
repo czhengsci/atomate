@@ -74,7 +74,7 @@ Note that there are various tools to query this information later, ranging from 
 
 MongoDB must be running and available to accept connections whenever you are running workflows. Thus, it is strongly recommended that you have a server to run MongoDB or (simpler) use a hosting service. Your options are:
 
-* use a commercial service to host your MongoDB instance. These are typically the easiest to use and offer high quality service but require payment for larger databases. mLab_ offers free 500 MB databases with payment required for larger databases or support/backup. The free service is certainly enough to get started for small to medium size projects.
+* use a commercial service to host your MongoDB instance. These are typically the easiest to use and offer high quality service but require payment for larger databases. mLab_ offers free 500 MB databases with payment required for larger databases or support/backup; another similar option is `MongoDB Atlas <https://www.mongodb.com/cloud/atlas>`_. The free tiers of these commercial services are certainly enough to get started for small to medium size projects.
 * contact your supercomputing center to see if they offer MongoDB hosting (e.g., NERSC has this, Google "request NERSC MongoDB database")
 * self-host a MongoDB server
 
@@ -91,11 +91,12 @@ Keep a record of your credentials - we will configure FireWorks to connect to th
 
 .. note::
 
-    The computers that perform the calculations must have access to your MongoDB server. Some computing resources have firewalls blocking connections. Although this is not a problem for most computing centers that allow such connections (particularly from MOM-style nodes, e.g. at NERSC, SDSC, etc.), but some of the more security-sensitive centers (e.g., LLNL, PNNL) will run into issues. If you run into connection issues later in this tutorial, some options are:
+    The computers that perform the calculations must have access to your MongoDB server. Some computing resources have firewalls blocking connections. Although this is not a problem for most computing centers that allow such connections (particularly from MOM-style nodes, e.g. at NERSC, SDSC, etc.), but some of the more security-sensitive centers (e.g., LLNL, PNNL, ARCHER) will run into issues. If you run into connection issues later in this tutorial, some options are:
 
-  * contact your computing center to review their security policy to allow connections from your MongoDB server (best resolution)
-  * set up an ssh tunnel to forward connections from allowed machines (the tunnel must be kept alive at all times you are running workflows)
-  * use `FireWorks offline mode`_, which is a workable solution but makes the system more difficult to use and limits some features of FireWorks.
+    * contact your computing center to review their security policy to allow connections from your MongoDB server (best resolution)
+    * host your Mongo database on a machine that you are able to securely connect to, e.g. on the supercomputing network itself (ask a system administrator for help)
+    * use a proxy service to forward connections from the MongoDB --> login node --> compute node (you might try, for example, `this tool <https://github.com/bakks/mongo-proxy`_).
+    * set up an ssh tunnel to forward connections from allowed machines (the tunnel must be kept alive at all times you are running workflows)
 
 
 .. _MongoDB: https://docs.mongodb.com/manual/

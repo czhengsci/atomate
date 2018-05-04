@@ -4,8 +4,8 @@ atomate.vasp.builders.examples package
 Submodules
 ----------
 
-atomate.vasp.builders.examples.run_builders module
---------------------------------------------------
+atomate.vasp.builders.examples.run\_builders module
+---------------------------------------------------
 
 .. automodule:: atomate.vasp.builders.examples.run_builders
     :members:

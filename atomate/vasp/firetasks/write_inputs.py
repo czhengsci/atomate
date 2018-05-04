@@ -12,6 +12,8 @@ from importlib import import_module
 
 import numpy as np
 
+from monty.serialization import dumpfn
+
 from fireworks import FiretaskBase, explicit_serialize
 from fireworks.utilities.dict_mods import apply_mod
 
@@ -22,6 +24,7 @@ from pymatgen.io.vasp import Incar, Poscar, Potcar, PotcarSingle
 from pymatgen.io.vasp.sets import MPStaticSet, MPNonSCFSet, MPSOCSet, MPHSEBSSet
 
 from atomate.utils.utils import env_chk, load_class
+from atomate.vasp.firetasks.glue_tasks import GetInterpolatedPOSCAR
 
 __author__ = 'Anubhav Jain, Shyue Ping Ong, Kiran Mathew'
 __email__ = 'ajain@lbl.gov'
@@ -58,6 +61,45 @@ class WriteVaspFromIOSet(FiretaskBase):
         else:
             vis_cls = load_class("pymatgen.io.vasp.sets", self["vasp_input_set"])
             vis = vis_cls(self["structure"], **self.get("vasp_input_params", {}))
+        vis.write_input(".")
+
+
+@explicit_serialize
+class WriteVaspFromIOSetFromInterpolatedPOSCAR(GetInterpolatedPOSCAR):
+    """
+    Grabs CONTCARS from two previous calculations to create interpolated
+    structure. Create VASP input files using implementations of pymatgen's
+    AbstractVaspInputSet. An input set can be provided as String/parameter
+    combo.
+
+    Required params:
+        start (str): name of fw for start of interpolation.
+        end (str): name of fw for end of interpolation.
+        this_image (int): which interpolation this is.
+        nimages (int) : number of interpolations.
+        autosort_tol (float): a distance tolerance in angstrom in which
+          to automatically sort end_structure to match to the closest
+          points in this particular structure.
+        vasp_input_set (str): a string name for the VASP input set (e.g., "MPRelaxSet").
+
+    Optional params:
+        vasp_input_params (dict): When using a string name for VASP input set, use this as a dict
+            to specify kwargs for instantiating the input set parameters. For example, if you want
+            to change the user_incar_settings, you should provide: {"user_incar_settings": ...}.
+            This setting is ignored if you provide the full object representation of a VaspInputSet
+            rather than a String.
+    """
+    # First, we make a fresh copy of the required_params before modifying.
+    required_params = ["start", "end", "this_image", "nimages", "vasp_input_set"]
+    optional_params = ["vasp_input_params", "autosort_tol"]
+
+    def run_task(self, fw_spec):
+        # Get interpolated structure.
+        structure = GetInterpolatedPOSCAR.interpolate_poscar(self, fw_spec)
+
+        # Assumes VaspInputSet String + parameters was provided
+        vis_cls = load_class("pymatgen.io.vasp.sets", self["vasp_input_set"])
+        vis = vis_cls(structure, **self.get("vasp_input_params", {}))
         vis.write_input(".")
 
 
@@ -124,7 +166,10 @@ class ModifyIncar(FiretaskBase):
 
         if incar_multiply:
             for k in incar_multiply:
-                incar[k] = incar[k] * incar_multiply[k]
+                if hasattr(incar[k], '__iter__'):  # is list-like
+                    incar[k] = list(np.multiply(incar[k], incar_multiply[k]))
+                else:
+                    incar[k] = incar[k] * incar_multiply[k]
 
         if incar_dictmod:
             apply_mod(incar_dictmod, incar)
@@ -148,14 +193,14 @@ class ModifyPotcar(FiretaskBase):
 
     required_params = ["potcar_symbols"]
     optional_params = ["functional", "input_filename", "output_filename"]
-    
+
     def run_task(self, fw_spec):
         potcar_symbols = env_chk(self.get("potcar_symbols"), fw_spec)
         functional = self.get("functional", None)
         potcar_name = self.get("input_filename", "POTCAR")
         potcar = Potcar.from_file(potcar_name)
 
-        # Replace PotcarSingles corresponding to elements 
+        # Replace PotcarSingles corresponding to elements
         # contained in potcar_symbols
         for n, psingle in enumerate(potcar):
             if psingle.element in potcar_symbols:
@@ -356,11 +401,11 @@ class WriteTransmutedStructureIOSet(FiretaskBase):
                 found = True
             if not found:
                 raise ValueError("Could not find transformation: {}".format(t))
-        
+
         # TODO: @matk86 - should prev_calc_dir use CONTCAR instead of POSCAR? Note that if
         # current dir, maybe it is POSCAR indeed best ... -computron
         structure = self['structure'] if not self.get('prev_calc_dir', None) else \
-                Poscar.from_file(os.path.join(self['prev_calc_dir'], 'POSCAR')).structure
+            Poscar.from_file(os.path.join(self['prev_calc_dir'], 'POSCAR')).structure
         ts = TransformedStructure(structure)
         transmuter = StandardTransmuter([ts], transformations)
         final_structure = transmuter.transformed_structures[-1].final_structure.copy()
@@ -370,6 +415,8 @@ class WriteTransmutedStructureIOSet(FiretaskBase):
         vis_dict.update(self.get("override_default_vasp_params", {}) or {})
         vis = vis_orig.__class__.from_dict(vis_dict)
         vis.write_input(".")
+
+        dumpfn(transmuter.transformed_structures[-1], "transformations.json")
 
 
 @explicit_serialize

@@ -48,24 +48,24 @@ atomate.vasp.powerups module
     :undoc-members:
     :show-inheritance:
 
-atomate.vasp.submission_filter module
--------------------------------------
+atomate.vasp.submission\_filter module
+--------------------------------------
 
 .. automodule:: atomate.vasp.submission_filter
     :members:
     :undoc-members:
     :show-inheritance:
 
-atomate.vasp.vasp_config module
--------------------------------
+atomate.vasp.vasp\_config module
+--------------------------------
 
 .. automodule:: atomate.vasp.vasp_config
     :members:
     :undoc-members:
     :show-inheritance:
 
-atomate.vasp.vasp_powerups module
----------------------------------
+atomate.vasp.vasp\_powerups module
+----------------------------------
 
 .. automodule:: atomate.vasp.vasp_powerups
     :members:
