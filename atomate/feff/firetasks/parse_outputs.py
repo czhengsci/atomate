@@ -70,6 +70,18 @@ class SpectrumToDbTask(FiretaskBase):
 
         db_file = env_chk(self.get('db_file'), fw_spec)
 
+        #Check log1.dat file for SCF convergence
+        not_converge_pattern = re.compile('Convergence not reached.*')
+        converge_pattern = re.compile('Convergence reached.*')
+        SCF_converged = None
+        for i, line in enumerate(open('log1.dat')):
+            if len(not_converge_pattern.findall(line)) > 0:
+                SCF_converged = False
+                break
+            elif len(converge_pattern.findall(line)) > 0:
+                SCF_converged = True
+                break
+
         cluster_dict = None
         tags = Tags.from_file(filename="feff.inp")
         if "RECIPROCAL" not in tags:
@@ -83,7 +95,8 @@ class SpectrumToDbTask(FiretaskBase):
                "edge": self.get("edge", None),
                "metadata": self.get("metadata", None),
                "dir_name": os.path.abspath(os.getcwd()),
-               "last_updated": datetime.utcnow()}
+               "last_updated": datetime.utcnow(),
+               "SCF_converged": SCF_converged}
 
         if not db_file:
             with open("feff_task.json", "w") as f:
